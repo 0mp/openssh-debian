@@ -5374,6 +5374,16 @@ AC_ARG_WITH([bsd-auth],
 	]
 )
 
+AC_ARG_WITH([systemd-notify],
+	[  --with-systemd-notify=name Have sshd notify systemd on start/reload ],
+	[
+		if test "x$withval" = "xyes"; then
+			AC_DEFINE_UNQUOTED([WITH_SYSTEMD_NOTIFY], [1],
+				[Define to have sshd notify systemd on start/reload])
+		fi
+	]
+)
+
 # Where to place sshd.pid
 piddir=/var/run
 # make sure the directory exists

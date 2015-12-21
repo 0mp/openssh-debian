@@ -21,7 +21,11 @@
 
 #include "includes.h"
 
-#if defined(WITH_SELINUX) || defined(LINUX_OOM_ADJUST)
+#if defined(WITH_SELINUX) || defined(LINUX_OOM_ADJUST) || \
+    defined(WITH_SYSTEMD_NOTIFY)
+#include <sys/socket.h>
+#include <sys/un.h>
+
 #include <errno.h>
 #include <stdarg.h>
 #include <string.h>
@@ -317,4 +321,72 @@ oom_adjust_restore(void)
 	return;
 }
 #endif /* LINUX_OOM_ADJUST */
-#endif /* WITH_SELINUX || LINUX_OOM_ADJUST */
+
+#ifdef WITH_SYSTEMD_NOTIFY
+static void
+ssh_systemd_notify(const char *s, int nolog)
+{
+	const char *path;
+	struct stat sb;
+	struct sockaddr_un addr;
+	int fd;
+
+	if ((path = getenv("NOTIFY_SOCKET")) == NULL)
+		return;
+	if (stat(path, &sb) != 0) {
+		if (!nolog) {
+			error_f("socket \"%s\" stat: %s",
+			    path, strerror(errno));
+		}
+		return;
+	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	if (strlcpy(addr.sun_path, path,
+	    sizeof(addr.sun_path)) >= sizeof(addr.sun_path)) {
+		if (!nolog)
+			error_f("socket path \"%s\" too long", path);
+		return;
+	}
+	if ((fd = socket(PF_UNIX, SOCK_DGRAM, 0)) == -1) {
+		if (!nolog)
+			error_f("socket \"%s\": %s", path, strerror(errno));
+		return;
+	}
+	if (connect(fd, &addr, sizeof(addr)) != 0) {
+		if (!nolog) {
+			error_f("socket \"%s\" connect: %s",
+			    path, strerror(errno));
+		}
+		close(fd);
+		return;
+	}
+	if (write(fd, s, strlen(s)) != (ssize_t)strlen(s)) {
+		if (!nolog) {
+			error_f("socket \"%s\" write: %s",
+			    path, strerror(errno));
+		}
+		close(fd);
+		return;
+	}
+	close(fd);
+	if (!nolog) {
+		debug_f("socket \"%s\" notified %s", path, s);
+	}
+}
+
+void
+ssh_systemd_notify_ready(void)
+{
+	ssh_systemd_notify("READY=1", 0);
+}
+
+void ssh_systemd_notify_reload(void)
+{
+	/* Called in signal handler context, so disable logging */
+	ssh_systemd_notify("RELOADING=1", 1);
+}
+#endif /* WITH_SYSTEMD_NOTIFY */
+
+#endif /* WITH_SELINUX || LINUX_OOM_ADJUST || WITH_SYSTEMD_NOTIFY */
