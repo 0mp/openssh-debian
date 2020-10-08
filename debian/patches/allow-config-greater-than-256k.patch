@@ -1,0 +1,29 @@
+From 89b54900ac61986760452f132bbe3fb7249cfdac Mon Sep 17 00:00:00 2001
+From: "markus@openbsd.org" <markus@openbsd.org>
+Date: Wed, 24 Jun 2020 15:08:53 +0000
+Subject: [PATCH] upstream: allow sshd_config longer than 256k; ok djm
+
+OpenBSD-Commit-ID: 83f40dd5457a64c1d3928eb4364461b22766beb3
+---
+ msg.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+Index: openssh/msg.c
+===================================================================
+--- openssh.orig/msg.c
++++ openssh/msg.c
+@@ -1,4 +1,4 @@
+-/* $OpenBSD: msg.c,v 1.17 2018/07/09 21:59:10 markus Exp $ */
++/* $OpenBSD: msg.c,v 1.19 2020/06/24 15:08:53 markus Exp $ */
+ /*
+  * Copyright (c) 2002 Markus Friedl.  All rights reserved.
+  *
+@@ -77,7 +77,7 @@ ssh_msg_recv(int fd, struct sshbuf *m)
+ 		return (-1);
+ 	}
+ 	msg_len = get_u32(buf);
+-	if (msg_len > 256 * 1024) {
++	if (msg_len > sshbuf_max_size(m)) {
+ 		error("ssh_msg_recv: read: bad msg_len %u", msg_len);
+ 		return (-1);
+ 	}
