@@ -39,6 +39,7 @@
 # include <paths.h>
 #endif
 #include <pwd.h>
+#include <grp.h>
 #ifdef HAVE_LOGIN_H
 #include <login.h>
 #endif
