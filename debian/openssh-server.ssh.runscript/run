@@ -1,8 +1,6 @@
 #!/usr/bin/env /lib/runit/invoke-run
 set -e
 
-NAME="ssh"
-
 sv start auditd  || sv check auditd || true
 
 # don't start if 'sshd_not_to_be_run' exists
@@ -16,5 +14,8 @@ exec 2>&1
 #Config test
 /usr/sbin/sshd -t || exit 162
 
-echo "Starting $NAME..."
+if [ "$VERBOSE" = 1 ]; then
+	echo "invoke-run: Starting $NAME"
+fi
+
 exec /usr/sbin/sshd -D -e $SSHD_OPTS
