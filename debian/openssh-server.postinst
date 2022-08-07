@@ -21,6 +21,31 @@ get_config_option() {
 	   /etc/ssh/sshd_config
 }
 
+get_config_option_all() {
+	option="$1"
+	file="$2"
+
+	if [ -z "$file" ]; then
+		file=/etc/ssh/sshd_config
+	fi
+
+	[ -f "$file" ] || return 0
+	# ListenAddress and Port only take a single word argument so anything
+	# after this must be a comment
+	while read option2 value junk; do
+		case $option2 in
+			$option)
+				echo $value
+				;;
+			Include)
+				# globs
+				for f in $value; do
+					get_config_option_all "$option" "$f"
+				done
+				;;
+		esac
+	done < $file
+}
 
 host_keys_required() {
 	hostkeys="$(get_config_option HostKey)"
@@ -128,13 +153,41 @@ if [ "$action" = configure ]; then
 	    # which we now move back into place.
 	    mv /etc/ssh/moduli.dpkg-bak /etc/ssh/moduli
 	fi
-	if dpkg --compare-versions "$2" lt-nl 1:9.0p1-2~ && \
-	   deb-systemd-helper --quiet was-enabled ssh.socket && \
-	   [ -d /run/systemd/system ]
+	if dpkg --compare-versions "$2" lt-nl 1:9.0p1-2~
 	then
 		# migrate to systemd socket activation.
-		systemctl unmask ssh.service
-		systemctl disable ssh.service
+		addresses=$(get_config_option_all ListenAddress)
+		ports=$(get_config_option_all Port)
+		if [ -n "$addresses$ports" ]
+		then
+			override_dir=/etc/systemd/system/ssh.socket.d
+			mkdir -p "$override_dir"
+			echo '[Socket]' > "$override_dir"/addresses.conf
+			echo 'ListenStream=' >> "$override_dir"/addresses.conf
+		fi
+		if [ -n "$addresses" ]; then
+			[ -n "$ports" ] || ports=22
+			for address in $addresses; do
+				# TODO: handle hostnames
+				for port in $ports; do
+					echo "ListenStream=$address:$port" \
+					     >> "$override_dir"/addresses.conf
+				done
+			done
+		elif [ -n "$ports" ]; then
+			for port in $ports; do
+				echo "ListenStream=$port" \
+				     >> "$override_dir"/addresses.conf
+			done
+		fi
+		# deb-systemd-helper is inadequate for the task of changing
+		# policy for the units on upgrade
+		if [ -d /run/systemd/system ]; then
+			systemctl disable ssh.service
+			systemctl unmask ssh.service
+			systemctl stop ssh.service
+			systemctl enable ssh.socket
+		fi
 	fi
 fi
 
