@@ -199,6 +199,12 @@ follows (modifying ListenStream to match your requirements):
 
 See systemd.socket(5) for details.
 
+If you do not want to use socket activation for ssh on your system, you
+can disable socket activation by running:
+
+  systemctl disable --now ssh.socket
+  systemctl enable --now ssh.service
+
 Terminating SSH sessions cleanly on shutdown/reboot with systemd
 ----------------------------------------------------------------
 
