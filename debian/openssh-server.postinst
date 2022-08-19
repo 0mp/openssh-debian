@@ -188,12 +188,18 @@ if [ "$action" = configure ]; then
 		fi
 		if [ -n "$addresses" ]; then
 			[ -n "$ports" ] || ports=22
+			count=0
 			for address in $addresses; do
+				count=$((count+1))
 				for port in $ports; do
 					echo "ListenStream=$address:$port" \
 					     >> "$override_dir"/addresses.conf
 				done
 			done
+			if [ $count -gt 1 ]; then
+				db_input critical openssh-server/listenstream-may-fail || true
+				db_go || true
+			fi
 		elif [ -n "$ports" ]; then
 			for port in $ports; do
 				echo "ListenStream=$port" \
