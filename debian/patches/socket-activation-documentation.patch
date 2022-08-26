@@ -34,3 +34,17 @@ Index: openssh/sshd_config.5
  .It Cm PrintLastLog
  Specifies whether
  .Xr sshd 8
+Index: openssh/sshd_config
+===================================================================
+--- openssh.orig/sshd_config
++++ openssh/sshd_config
+@@ -12,6 +12,9 @@
+ 
+ Include /etc/ssh/sshd_config.d/*.conf
+ 
++# Port and ListenAddress options are not used when sshd is socket-activated,
++# which is now the default in Debian.  See sshd_config(5) and
++# /usr/share/doc/openssh-server/README.Debian.gz for details.
+ #Port 22
+ #AddressFamily any
+ #ListenAddress 0.0.0.0
