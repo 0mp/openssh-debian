@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openssh\n"
 "Report-Msgid-Bugs-To: openssh@packages.debian.org\n"
-"POT-Creation-Date: 2022-08-19 20:27+0000\n"
+"POT-Creation-Date: 2022-09-23 19:34+0000\n"
 "PO-Revision-Date: 2014-11-23 23:49-0200\n"
 "Last-Translator: José de Figueiredo <deb.gnulinux@gmail.com>\n"
 "Language-Team: Brazilian Portuguese <debian-l10n-portuguese@lists.debian."
@@ -59,58 +59,24 @@ msgstr ""
 #. Type: error
 #. Description
 #: ../openssh-server.templates:3001
-msgid "SSH server may fail to start on reboot"
+msgid "Not migrating to socket activation"
 msgstr ""
 
 #. Type: error
 #. Description
 #: ../openssh-server.templates:3001
 msgid ""
-"This version of openssh-server uses socket-based activation, which means "
-"ListenAddress settings in sshd_config have been migrated to ListenStream "
-"settings in /etc/systemd/system/ssh.socket.d/addresses.conf. If one of the "
-"ListenAddress values configured in sshd is not available, sshd will still "
-"listen on any remaining configured addresses; but if one of the addresses "
-"configured in ListenStream is not available, the systemd socket unit will "
-"fail to start."
+"This version of openssh-server uses socket-based activation by default. "
+"However, because you have more than one ListenAddress configured in "
+"sshd_config, it is impossible to determine at upgrade time if migrating you "
+"to socket-based activation would cause the starting of sshd at boot to be "
+"unreliable."
 msgstr ""
 
 #. Type: error
 #. Description
 #: ../openssh-server.templates:3001
 msgid ""
-"You have more than one ListenAddress configured in sshd_config, which means "
-"it is possible that sshd starts successfully on your system, but will fail "
-"to start on reboot because one of the addresses is unavailable to bind to.  "
-"Because an address may become available late in the boot process, it is not "
-"possible to determine during upgrade whether sshd will or will not start on "
-"reboot."
-msgstr ""
-
-#. Type: error
-#. Description
-#: ../openssh-server.templates:3001
-msgid ""
-"If you rely on sshd for access to this system, you should examine /etc/"
-"systemd/system/ssh.socket.d/addresses.conf prior to reboot and make any "
-"necessary corrections to ensure the availability of the system."
-msgstr ""
-
-#. Type: error
-#. Description
-#: ../openssh-server.templates:3001
-msgid ""
-"The surest way to guarantee that ssh.socket will start after reboot is to "
-"remove /etc/systemd/system/ssh.socket.d/addresses.conf entirely and allow "
-"systemd to bind to all addresses."
-msgstr ""
-
-#. Type: error
-#. Description
-#: ../openssh-server.templates:3001
-msgid ""
-"If you must limit the addresses that ssh binds to but cannot ensure these "
-"addresses are available before the socket unit starts, you can revert to not "
-"using socket-based activation for sshd.  See /usr/share/doc/openssh-server/"
-"README.Debian.gz for more information."
+"Because a failure to start ssh may make it impossible to admininister a "
+"system, you will not be migrated to socket-based activation at this time."
 msgstr ""
