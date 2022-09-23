@@ -52,7 +52,7 @@ hostnames_to_addresses() {
 	for address in $addresses; do
 		if echo $address | grep -q '^[0-9.]\+$'; then
 			numeric_addresses="$numeric_addresses $address"
-		elif echo $address | grep -q '^[0-9:]\+$'; then
+		elif echo $address | grep -q '^[0-9a-f:]\+$'; then
 			numeric_addresses="$numeric_addresses [$address]"
 		else
 			new_addresses=$( (getent ahostsv4 $address;
