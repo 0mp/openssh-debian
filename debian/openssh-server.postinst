@@ -200,6 +200,7 @@ if [ "$action" = configure ]; then
 				db_input critical openssh-server/listenstream-may-fail || true
 				db_go || true
 				rm -f "$override_dir"/addresses.conf.new
+				rmdir "$override_dir"
 				NO_SOCKET_MIGRATION=1
 			else
 				mv "$override_dir"/addresses.conf.new \
@@ -215,6 +216,13 @@ if [ "$action" = configure ]; then
 		# policy for the units on upgrade
 		if [ -d /run/systemd/system ] && [ -z "$NO_SOCKET_MIGRATION" ]
 		then
+			override_dir=/etc/systemd/system/ssh.service.d
+			mkdir -p "$override_dir"
+			echo '[Unit]' > "$override_dir"/00-socket.conf
+			echo 'After=ssh.socket' >> "$override_dir"/00-socket.conf
+			echo 'Requires=ssh.socket' >> "$override_dir"/00-socket.conf
+
+			systemctl daemon-reload
 			systemctl disable ssh.service
 			systemctl unmask ssh.service
 			systemctl stop ssh.service
