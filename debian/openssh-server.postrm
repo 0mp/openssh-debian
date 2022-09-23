@@ -23,6 +23,10 @@ case $1 in
 		if command -v ucfr >/dev/null 2>&1; then
 			ucfr --purge openssh-server /etc/ssh/sshd_config
 		fi
+		rm -f /etc/systemd/system/ssh.service.d/00-socket.conf
+		rm -f /etc/systemd/system/ssh.socket.d/addresses.conf
+		rmdir /etc/systemd/system/ssh.service.d || true
+		rmdir /etc/systemd/system/ssh.socket.d || true
 		rm -f /etc/ssh/sshd_not_to_be_run
 		[ ! -d /etc/ssh ] || rmdir --ignore-fail-on-non-empty /etc/ssh
 
