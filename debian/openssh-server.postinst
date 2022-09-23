@@ -212,21 +212,24 @@ if [ "$action" = configure ]; then
 				     >> "$override_dir"/addresses.conf
 			done
 		fi
-		# deb-systemd-helper is inadequate for the task of changing
-		# policy for the units on upgrade
-		if [ -d /run/systemd/system ] && [ -z "$NO_SOCKET_MIGRATION" ]
-		then
+	fi
+	if dpkg --compare-versions "$2" lt 1:9.0p1-2~; then
+		if [ -z "$NO_SOCKET_MIGRATION" ]; then
 			override_dir=/etc/systemd/system/ssh.service.d
 			mkdir -p "$override_dir"
 			echo '[Unit]' > "$override_dir"/00-socket.conf
 			echo 'After=ssh.socket' >> "$override_dir"/00-socket.conf
 			echo 'Requires=ssh.socket' >> "$override_dir"/00-socket.conf
 
-			systemctl daemon-reload
-			systemctl disable ssh.service
-			systemctl unmask ssh.service
-			systemctl stop ssh.service
-			systemctl enable ssh.socket
+			# deb-systemd-helper is inadequate for the task of
+			# changing policy for the units on upgrade
+			if [ -d /run/systemd/system ]; then
+				systemctl daemon-reload
+				systemctl disable ssh.service
+				systemctl unmask ssh.service
+				systemctl stop ssh.service
+				systemctl enable ssh.socket
+			fi
 		fi
 	fi
 fi
