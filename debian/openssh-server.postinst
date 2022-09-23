@@ -225,6 +225,14 @@ fi
 
 #DEBHELPER#
 
+if [ -d /run/systemd/system ]; then
+	if deb-systemd-helper --quiet was-enabled ssh.socket; then
+		deb-systemd-invoke restart ssh.socket
+	elif deb-systemd-helper --quiet was-enabled ssh.service; then
+		deb-systemd-invoke restart ssh.service
+	fi
+fi
+
 db_stop
 
 exit 0
