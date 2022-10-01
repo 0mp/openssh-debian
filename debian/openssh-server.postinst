@@ -210,7 +210,8 @@ if [ "$action" = configure ]; then
 			done
 		fi
 
-		if [ -z "$NO_SOCKET_MIGRATION" ]; then
+		if [ -z "$NO_SOCKET_MIGRATION" ] && [ -n "$addresses$ports" ]
+		then
                     mv "$override_dir"/addresses.conf.new \
                        "$override_dir"/addresses.conf
 		fi
