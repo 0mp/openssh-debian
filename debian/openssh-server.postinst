@@ -202,15 +202,17 @@ if [ "$action" = configure ]; then
 				rm -f "$override_dir"/addresses.conf.new
 				rmdir "$override_dir"
 				NO_SOCKET_MIGRATION=1
-			else
-				mv "$override_dir"/addresses.conf.new \
-				   "$override_dir"/addresses.conf
 			fi
 		elif [ -n "$ports" ]; then
 			for port in $ports; do
 				echo "ListenStream=$port" \
-				     >> "$override_dir"/addresses.conf
+				     >> "$override_dir"/addresses.conf.new
 			done
+		fi
+
+		if [ -z "$NO_SOCKET_MIGRATION" ]; then
+                    mv "$override_dir"/addresses.conf.new \
+                       "$override_dir"/addresses.conf
 		fi
 	fi
 	if dpkg --compare-versions "$2" lt 1:9.0p1-2~; then
