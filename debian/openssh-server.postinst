@@ -50,21 +50,56 @@ get_config_option_all() {
 hostnames_to_addresses() {
 	addresses="$1"
 	for address in $addresses; do
-		if echo $address | grep -q '^[0-9.]\+$'; then
+		address_no_port="$(address_strip_port $address)"
+		if echo "$address_no_port" | grep -q '^[0-9a-f:]\+$\|^[0-9.]\+$'; then
 			numeric_addresses="$numeric_addresses $address"
-		elif echo $address | grep -q '^[0-9a-f:]\+$'; then
-			numeric_addresses="$numeric_addresses [$address]"
 		else
-			new_addresses=$( (getent ahostsv4 $address;
-			                  getent ahostsv6 $address) \
+			new_addresses=$( (getent ahostsv4 $address_no_port;
+			                  getent ahostsv6 $address_no_port) \
 			   | awk '$1 ~ /^::ffff:/ || $2 != "STREAM" { next; }
 			          $1 ~ /:/ { print "[" $1 "]"; next; }
 			          { print $1 }' \
 			   | sort -u)
+			port="$(port_from_address $address)"
+			if [ -n "$port" ]; then
+				new_addresses="$(for addr in $new_addresses; do echo $addr:$port; done)"
+			fi
 			numeric_addresses="$numeric_addresses $new_addresses"
 		fi
 	done
 	echo "$numeric_addresses"
+}
+
+port_from_address() {
+        address="$1"
+        if echo $address | grep -q '^\[[0-9a-f:]*\]:'; then
+                # This is an IPv6 address with a port.
+                port="$(echo $address | awk -F':' '{print $NF}')"
+        elif echo $address | grep -q '^\[[0-9a-f:]*\]\+$\|^[0-9a-f:]\+$'; then
+                # This is an IPv6 address without a port.
+                port=""
+        else
+                # This is an IPv4 address or hostname, where the port
+                # may or may not be specified.
+                port="$(echo $address | awk -F':' '{print $2}')"
+        fi
+        echo "$port"
+}
+
+address_strip_port() {
+        address="$1"
+        if echo $address | grep -q '^\[[0-9a-f:]*\]\(:\|$\)'; then
+                # This is an IPv6 address in brackets, with or without a port.
+                address_no_port="$(echo $address | awk -F '[][]' '{print $2}')"
+        elif echo $address | grep -q '^[0-9a-f:]\+$'; then
+                # This is an IPv6 address with no brackets and no port.
+                address_no_port="$address"
+        else
+                # This is an IPv4 address or hostname, where the port
+                # may or may not be specified.
+                address_no_port="$(echo $address | awk -F':' '{print $1}')"
+        fi
+        echo "$address_no_port"
 }
 
 host_keys_required() {
@@ -191,16 +226,22 @@ if [ "$action" = configure ]; then
 			count=0
 			for address in $addresses; do
 				count=$((count+1))
-				for port in $ports; do
-					echo "ListenStream=$address:$port" \
+				port_from_address="$(port_from_address $address)"
+				if [ -z "$port_from_address" ]; then
+					for port in $ports; do
+						echo "ListenStream=$address:$port" \
+						     >> "$override_dir"/addresses.conf.new
+					done
+				else
+					echo "ListenStream=$address" \
 					     >> "$override_dir"/addresses.conf.new
-				done
+				fi
 			done
 			if [ $count -gt 1 ]; then
 				db_input critical openssh-server/listenstream-may-fail || true
 				db_go || true
 				rm -f "$override_dir"/addresses.conf.new
-				rmdir "$override_dir"
+				rmdir --ignore-fail-on-non-empty "$override_dir"
 				NO_SOCKET_MIGRATION=1
 			fi
 		elif [ -n "$ports" ]; then
