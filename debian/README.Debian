@@ -184,23 +184,7 @@ this sshd manually on upgrades.
 Socket-based activation with systemd
 ------------------------------------
 
-If you want to reconfigure systemd to listen on port 22 itself and launch
-sshd on connection (systemd-style socket activation), then you can run:
-
-  systemctl disable --now ssh.service
-  systemctl start ssh.socket
-
-To roll back this change, run:
-
-  systemctl stop ssh.socket
-  systemctl enable --now ssh.service
-
-Or if you want to make this change permanent:
-
-  systemctl enable ssh.socket
-
-This may be appropriate in environments where minimal footprint is critical
-(e.g. cloud guests).
+By default, socket-based activation is used on systems that use systemd.
 
 The provided ssh.socket unit file sets ListenStream=22.  If you need to have
 it listen on a different address or port, then you will need to do this as
@@ -214,6 +198,12 @@ follows (modifying ListenStream to match your requirements):
   systemctl daemon-reload
 
 See systemd.socket(5) for details.
+
+If you do not want to use socket activation for ssh on your system, you
+can disable socket activation by running:
+
+  systemctl disable --now ssh.socket
+  systemctl enable --now ssh.service
 
 Terminating SSH sessions cleanly on shutdown/reboot with systemd
 ----------------------------------------------------------------

@@ -1,0 +1,50 @@
+Index: openssh/sshd_config.5
+===================================================================
+--- openssh.orig/sshd_config.5
++++ openssh/sshd_config.5
+@@ -1069,6 +1069,15 @@
+ Multiple
+ .Cm ListenAddress
+ options are permitted.
++.Pp
++.Cm Note:
++On Debian, the openssh-server package is configured to use systemd
++socket-based activation by default.  Therefore if you are using systemd with
++the default configuration,
++.Cm ListenAddress
++options will not be honored.  Address configuration must be handled in
++.Pa /etc/systemd/system/ssh.socket.d
++instead.
+ .It Cm LoginGraceTime
+ The server disconnects after this time if the user has not
+ successfully logged in.
+@@ -1520,6 +1529,15 @@
+ Multiple options of this type are permitted.
+ See also
+ .Cm ListenAddress .
++.Pp
++.Cm Note:
++On Debian, the openssh-server package is configured to use systemd
++socket-based activation by default.  Therefore if you are using systemd with
++the default configuration,
++.Cm Port
++options will not be honored.  Address configuration must be handled in
++.Pa /etc/systemd/system/ssh.socket.d
++instead.
+ .It Cm PrintLastLog
+ Specifies whether
+ .Xr sshd 8
+Index: openssh/sshd_config
+===================================================================
+--- openssh.orig/sshd_config
++++ openssh/sshd_config
+@@ -12,6 +12,9 @@
+ 
+ Include /etc/ssh/sshd_config.d/*.conf
+ 
++# Port and ListenAddress options are not used when sshd is socket-activated,
++# which is now the default in Debian.  See sshd_config(5) and
++# /usr/share/doc/openssh-server/README.Debian.gz for details.
+ #Port 22
+ #AddressFamily any
+ #ListenAddress 0.0.0.0

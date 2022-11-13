@@ -7,15 +7,15 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openssh-server\n"
 "Report-Msgid-Bugs-To: openssh@packages.debian.org\n"
-"POT-Creation-Date: 2014-03-20 02:06+0000\n"
+"POT-Creation-Date: 2022-09-23 19:34+0000\n"
 "PO-Revision-Date: 2014-08-01 14:44+0200\n"
 "Last-Translator: Mert Dirik <mertdirik@gmail.com>\n"
 "Language-Team: Debian L10n Turkish <debian-l10n-turkish@lists.debian.org>\n"
+"Language: tr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 1.5.4\n"
-"Language: tr\n"
 
 #. Type: boolean
 #. Description
@@ -56,3 +56,28 @@ msgstr ""
 "parola doğrulama yöntemiyle oturum açılabileceği varsayımıyla hareket eden "
 "sistemlerde eskiden çalışan düzenin bozulmasına sebep olacaktır. Bu "
 "değişikliği yalnızca sorun çıkarmayacağından eminseniz yapın."
+
+#. Type: error
+#. Description
+#: ../openssh-server.templates:3001
+msgid "Not migrating to socket activation"
+msgstr ""
+
+#. Type: error
+#. Description
+#: ../openssh-server.templates:3001
+msgid ""
+"This version of openssh-server uses socket-based activation by default. "
+"However, because you have more than one ListenAddress configured in "
+"sshd_config, it is impossible to determine at upgrade time if migrating you "
+"to socket-based activation would cause the starting of sshd at boot to be "
+"unreliable."
+msgstr ""
+
+#. Type: error
+#. Description
+#: ../openssh-server.templates:3001
+msgid ""
+"Because a failure to start ssh may make it impossible to admininister a "
+"system, you will not be migrated to socket-based activation at this time."
+msgstr ""

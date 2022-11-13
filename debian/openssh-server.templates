@@ -21,3 +21,15 @@ Description: Allow password authentication?
  By default, the SSH server will allow authenticating using a password.
  You may want to change this if all users on this system authenticate using
  a stronger authentication method, such as public keys.
+
+Template: openssh-server/listenstream-may-fail
+Type: error
+_Description: Not migrating to socket activation
+ This version of openssh-server uses socket-based activation by default.
+ However, because you have more than one ListenAddress configured in
+ sshd_config, it is impossible to determine at upgrade time if migrating
+ you to socket-based activation would cause the starting of sshd at boot
+ to be unreliable.
+ .
+ Because a failure to start ssh may make it impossible to admininister a
+ system, you will not be migrated to socket-based activation at this time.

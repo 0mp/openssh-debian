@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openssh 1:6.6p1-1\n"
 "Report-Msgid-Bugs-To: openssh@packages.debian.org\n"
-"POT-Creation-Date: 2014-03-20 02:06+0000\n"
+"POT-Creation-Date: 2022-09-23 19:34+0000\n"
 "PO-Revision-Date: 2014-06-12 12:25+0200\n"
 "Last-Translator: Michal Simunek <michal.simunek@gmail.com>\n"
 "Language-Team: Czech <debian-l10n-czech@lists.debian.org>\n"
@@ -53,3 +53,28 @@ msgstr ""
 "poškodit systémy, které jsou nastaveny s předpokladem, že bude možné se "
 "přihlašovat přes SSH jako root pomocí ověřování heslem. Změnu této volby "
 "byste měli provést pouze pokud ověřování heslem potřebujete."
+
+#. Type: error
+#. Description
+#: ../openssh-server.templates:3001
+msgid "Not migrating to socket activation"
+msgstr ""
+
+#. Type: error
+#. Description
+#: ../openssh-server.templates:3001
+msgid ""
+"This version of openssh-server uses socket-based activation by default. "
+"However, because you have more than one ListenAddress configured in "
+"sshd_config, it is impossible to determine at upgrade time if migrating you "
+"to socket-based activation would cause the starting of sshd at boot to be "
+"unreliable."
+msgstr ""
+
+#. Type: error
+#. Description
+#: ../openssh-server.templates:3001
+msgid ""
+"Because a failure to start ssh may make it impossible to admininister a "
+"system, you will not be migrated to socket-based activation at this time."
+msgstr ""
