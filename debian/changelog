@@ -1,3 +1,11 @@
+openssh (1:9.2p1-2+deb12u3) UNRELEASED; urgency=medium
+
+  * Always use the internal mkdtemp implementation, since it substitutes
+    more randomness into the template string than glibc's version (closes:
+    #1001186, #1064898).
+
+ -- Colin Watson <cjwatson@debian.org>  Sun, 03 Mar 2024 19:27:10 +0000
+
 openssh (1:9.2p1-2+deb12u2) bookworm-security; urgency=medium
 
   * Cherry-pick from upstream:
