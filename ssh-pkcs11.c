@@ -1514,6 +1514,10 @@ pkcs11_register_provider(char *provider_id, char *pin,
 		    __func__, provider_id);
 		goto fail;
 	}
+	if (lib_contains_symbol(provider_id, "C_GetFunctionList") != 0) {
+		error("provider %s is not a PKCS11 library", provider_id);
+		goto fail;
+	}
 	/* open shared pkcs11-library */
 	if ((handle = dlopen(provider_id, RTLD_NOW)) == NULL) {
 		error("dlopen %s failed: %s", provider_id, dlerror());
