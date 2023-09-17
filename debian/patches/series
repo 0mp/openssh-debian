@@ -27,3 +27,5 @@ revert-x32-sandbox-breakage.patch
 ssh-copy-id-heredoc-syntax.patch
 ssh-agent-double-free.patch
 sandbox-pselect6_time64.patch
+CVE-2023-38408-1.patch
+CVE-2023-38408-2.patch

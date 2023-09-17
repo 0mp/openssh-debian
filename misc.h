@@ -90,6 +90,7 @@ const char *atoi_err(const char *, int *);
 int	 parse_absolute_time(const char *, uint64_t *);
 void	 format_absolute_time(uint64_t, char *, size_t);
 int	 path_absolute(const char *);
+int	 lib_contains_symbol(const char *, const char *);
 
 void	 sock_set_v6only(int);
 
