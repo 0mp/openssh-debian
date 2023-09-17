@@ -1532,15 +1532,17 @@ pkcs11_register_provider(char *provider_id, char *pin,
 		debug_f("provider already registered: %s", provider_id);
 		goto fail;
 	}
+	if (lib_contains_symbol(provider_id, "C_GetFunctionList") != 0) {
+		error("provider %s is not a PKCS11 library", provider_id);
+		goto fail;
+	}
 	/* open shared pkcs11-library */
 	if ((handle = dlopen(provider_id, RTLD_NOW)) == NULL) {
 		error("dlopen %s failed: %s", provider_id, dlerror());
 		goto fail;
 	}
-	if ((getfunctionlist = dlsym(handle, "C_GetFunctionList")) == NULL) {
-		error("dlsym(C_GetFunctionList) failed: %s", dlerror());
-		goto fail;
-	}
+	if ((getfunctionlist = dlsym(handle, "C_GetFunctionList")) == NULL)
+		fatal("dlsym(C_GetFunctionList) failed: %s", dlerror());
 	p = xcalloc(1, sizeof(*p));
 	p->name = xstrdup(provider_id);
 	p->handle = handle;

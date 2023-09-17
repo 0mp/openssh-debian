@@ -1,3 +1,12 @@
+openssh (1:9.2p1-2+deb12u1) UNRELEASED; urgency=medium
+
+  * Cherry-pick from OpenSSH 9.3p2:
+    - [CVE-2023-38408] Fix a condition where specific libraries loaded via
+      ssh-agent(1)'s PKCS#11 support could be abused to achieve remote code
+      execution via a forwarded agent socket (closes: #1042460).
+
+ -- Colin Watson <cjwatson@debian.org>  Sun, 17 Sep 2023 21:23:50 +0100
+
 openssh (1:9.2p1-2) unstable; urgency=medium
 
   * Fix mistakenly-unreleased entry for 1:9.2p1-1 in debian/NEWS.

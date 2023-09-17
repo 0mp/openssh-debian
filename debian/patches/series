@@ -26,3 +26,6 @@ maxhostnamelen.patch
 conch-ssh-rsa.patch
 systemd-socket-activation.patch
 remove-spurious-ssh-agent-options.patch
+CVE-2023-38408-1.patch
+CVE-2023-38408-2.patch
+CVE-2023-38408-3.patch
