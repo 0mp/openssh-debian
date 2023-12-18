@@ -638,6 +638,41 @@ set_addrinfo_port(struct addrinfo *addrs, int port)
 	}
 }
 
+static int
+valid_hostname(const char *s)
+{
+	size_t i;
+
+	if (*s == '-')
+		return 0;
+	for (i = 0; s[i] != 0; i++) {
+		if (strchr("'`\"$\\;&<>|(){}", s[i]) != NULL ||
+		    isspace((u_char)s[i]) || iscntrl((u_char)s[i]))
+			return 0;
+	}
+	return 1;
+}
+
+static int
+valid_ruser(const char *s)
+{
+	size_t i;
+
+	if (*s == '-')
+		return 0;
+	for (i = 0; s[i] != 0; i++) {
+		if (strchr("'`\";&<>|(){}", s[i]) != NULL)
+			return 0;
+		/* Disallow '-' after whitespace */
+		if (isspace((u_char)s[i]) && s[i + 1] == '-')
+			return 0;
+		/* Disallow \ in last position */
+		if (s[i] == '\\' && s[i + 1] == '\0')
+			return 0;
+	}
+	return 1;
+}
+
 /*
  * Main program for the ssh client.
  */
@@ -1123,6 +1158,10 @@ main(int ac, char **av)
 	if (!host)
 		usage();
 
+	if (!valid_hostname(host))
+		fatal("hostname contains invalid characters");
+	if (options.user != NULL && !valid_ruser(options.user))
+		fatal("remote username contains invalid characters");
 	host_arg = xstrdup(host);
 
 	/* Initialize the command to execute on remote host. */
