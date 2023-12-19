@@ -29,3 +29,5 @@ ssh-agent-double-free.patch
 sandbox-pselect6_time64.patch
 CVE-2023-38408-1.patch
 CVE-2023-38408-2.patch
+CVE-2021-41617-1.patch
+CVE-2021-41617-2.patch
