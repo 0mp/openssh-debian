@@ -16,6 +16,14 @@ openssh (1:8.4p1-5+deb11u3) UNRELEASED; urgency=medium
       encryption, and deleting an equal number of consecutive messages
       immediately after encryption starts. A peer SSH client/server would
       not be able to detect that messages were deleted.
+    - [CVE-2023-51385] ssh(1): if an invalid user or hostname that contained
+      shell metacharacters was passed to ssh(1), and a ProxyCommand,
+      LocalCommand directive or "match exec" predicate referenced the user
+      or hostname via %u, %h or similar expansion token, then an attacker
+      who could supply arbitrary user/hostnames to ssh(1) could potentially
+      perform command injection depending on what quoting was present in the
+      user-supplied ssh_config(5) directive. ssh(1) now bans most shell
+      metacharacters from user and hostnames supplied via the command-line.
 
  -- Colin Watson <cjwatson@debian.org>  Tue, 19 Dec 2023 16:37:45 +0000
 
