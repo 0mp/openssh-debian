@@ -1,4 +1,4 @@
-openssh (1:9.2p1-2+deb12u2) UNRELEASED; urgency=medium
+openssh (1:9.2p1-2+deb12u2) bookworm-security; urgency=medium
 
   * Cherry-pick from upstream:
     - [CVE-2023-28531] ssh-add(1): when adding smartcard keys to
@@ -30,7 +30,7 @@ openssh (1:9.2p1-2+deb12u2) UNRELEASED; urgency=medium
       user-supplied ssh_config(5) directive. ssh(1) now bans most shell
       metacharacters from user and hostnames supplied via the command-line.
 
- -- Colin Watson <cjwatson@debian.org>  Tue, 19 Dec 2023 12:05:01 +0000
+ -- Colin Watson <cjwatson@debian.org>  Tue, 19 Dec 2023 14:51:56 +0000
 
 openssh (1:9.2p1-2+deb12u1) bookworm; urgency=medium
 
