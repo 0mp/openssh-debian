@@ -16,6 +16,11 @@ openssh (1:9.2p1-2+deb12u2) UNRELEASED; urgency=medium
       encryption, and deleting an equal number of consecutive messages
       immediately after encryption starts. A peer SSH client/server would
       not be able to detect that messages were deleted.
+    - [CVE-2023-51384] ssh-agent(1): when adding PKCS#11-hosted private keys
+      while specifying destination constraints, if the PKCS#11 token
+      returned multiple keys then only the first key had the constraints
+      applied. Use of regular private keys, FIDO tokens and unconstrained
+      keys are unaffected.
 
  -- Colin Watson <cjwatson@debian.org>  Tue, 19 Dec 2023 12:05:01 +0000
 
