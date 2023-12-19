@@ -8,6 +8,14 @@ openssh (1:8.4p1-5+deb11u3) UNRELEASED; urgency=medium
       has been set to run the command as a different user. Instead these
       commands would inherit the groups that sshd(8) was started with
       (closes: #995130).
+    - [CVE-2023-48795] ssh(1), sshd(8): implement protocol extensions to
+      thwart the so-called "Terrapin attack" discovered by Fabian Bäumer,
+      Marcus Brinkmann and Jörg Schwenk. This attack allows a MITM to effect
+      a limited break of the integrity of the early encrypted SSH transport
+      protocol by sending extra messages prior to the commencement of
+      encryption, and deleting an equal number of consecutive messages
+      immediately after encryption starts. A peer SSH client/server would
+      not be able to detect that messages were deleted.
 
  -- Colin Watson <cjwatson@debian.org>  Tue, 19 Dec 2023 16:37:45 +0000
 
