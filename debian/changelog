@@ -8,6 +8,14 @@ openssh (1:9.2p1-2+deb12u2) UNRELEASED; urgency=medium
       without constraints. The common cases of non-smartcard keys and keys
       without destination constraints are unaffected. This problem was
       reported by Luci Stanescu (closes: #1033166).
+    - [CVE-2023-48795] ssh(1), sshd(8): implement protocol extensions to
+      thwart the so-called "Terrapin attack" discovered by Fabian Bäumer,
+      Marcus Brinkmann and Jörg Schwenk. This attack allows a MITM to effect
+      a limited break of the integrity of the early encrypted SSH transport
+      protocol by sending extra messages prior to the commencement of
+      encryption, and deleting an equal number of consecutive messages
+      immediately after encryption starts. A peer SSH client/server would
+      not be able to detect that messages were deleted.
 
  -- Colin Watson <cjwatson@debian.org>  Tue, 19 Dec 2023 12:05:01 +0000
 
