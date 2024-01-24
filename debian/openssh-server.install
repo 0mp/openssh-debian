@@ -20,3 +20,5 @@ debian/systemd/ssh-session-cleanup usr/lib/openssh
 # dh_apport would be neater, but at the time of writing it isn't in unstable
 # yet.
 debian/openssh-server.apport => usr/share/apport/package-hooks/openssh-server.py
+
+usr/lib/systemd/system-generators/sshd-socket-generator
