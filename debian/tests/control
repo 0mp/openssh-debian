@@ -21,3 +21,9 @@ Restrictions: needs-root allow-stderr
 Depends: openssh-client,
          openssh-server,
          systemd,
+
+Tests: sshd-socket-generator
+Restrictions: needs-root allow-stderr
+Depends: openssh-client,
+         openssh-server,
+         systemd,
