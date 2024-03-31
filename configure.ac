@@ -4950,29 +4950,6 @@ AC_SUBST([GSSLIBS])
 AC_SUBST([K5LIBS])
 AC_SUBST([CHANNELLIBS])
 
-# Check whether user wants systemd support
-SYSTEMD_MSG="no"
-AC_ARG_WITH(systemd,
-	[  --with-systemd          Enable systemd support],
-	[ if test "x$withval" != "xno" ; then
-		AC_PATH_TOOL([PKGCONFIG], [pkg-config], [no])
-		if test "$PKGCONFIG" != "no"; then
-			AC_MSG_CHECKING([for libsystemd])
-			if $PKGCONFIG --exists libsystemd; then
-				SYSTEMD_CFLAGS=`$PKGCONFIG --cflags libsystemd`
-				SYSTEMD_LIBS=`$PKGCONFIG --libs libsystemd`
-				CPPFLAGS="$CPPFLAGS $SYSTEMD_CFLAGS"
-				SSHDLIBS="$SSHDLIBS $SYSTEMD_LIBS"
-				AC_MSG_RESULT([yes])
-				AC_DEFINE(HAVE_SYSTEMD, 1, [Define if you want systemd support.])
-				SYSTEMD_MSG="yes"
-			else
-				AC_MSG_RESULT([no])
-			fi
-		fi
-	fi ]
-)
-
 # Looking for programs, paths and files
 
 PRIVSEP_PATH=/var/empty
@@ -5397,6 +5374,26 @@ AC_ARG_WITH([bsd-auth],
 	]
 )
 
+AC_ARG_WITH([systemd-notify],
+	[  --with-systemd-notify=name Have sshd notify systemd on start/reload ],
+	[
+		if test "x$withval" = "xyes"; then
+			AC_DEFINE_UNQUOTED([WITH_SYSTEMD_NOTIFY], [1],
+				[Define to have sshd notify systemd on start/reload])
+		fi
+	]
+)
+
+AC_ARG_WITH([systemd-socket-activation],
+	[  --with-systemd-socket-activation Allow use via systemd.socket(5)],
+	[
+		if test "x$withval" = "xyes"; then
+			AC_DEFINE_UNQUOTED([WITH_SYSTEMD_SOCKET_ACTIVATION], [1],
+				[Define to have sshd accept systemd socket activation])
+		fi
+	]
+)
+
 # Where to place sshd.pid
 piddir=/var/run
 # make sure the directory exists
@@ -5792,7 +5789,6 @@ echo "                   libldns support: $LDNS_MSG"
 echo "  Solaris process contract support: $SPC_MSG"
 echo "           Solaris project support: $SP_MSG"
 echo "         Solaris privilege support: $SPP_MSG"
-echo "                   systemd support: $SYSTEMD_MSG"
 echo "       IP address in \$DISPLAY hack: $DISPLAY_HACK_MSG"
 echo "           Translate v4 in v6 hack: $IPV4_IN6_HACK_MSG"
 echo "                  BSD Auth support: $BSD_AUTH_MSG"

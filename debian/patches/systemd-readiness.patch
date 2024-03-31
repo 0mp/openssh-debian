@@ -1,84 +1,168 @@
-From b939a041afc3938937a3e9d2495202cf1a7b90ab Mon Sep 17 00:00:00 2001
+From ac30516ec883fc7acced006879512dca44c561a5 Mon Sep 17 00:00:00 2001
 From: Michael Biebl <biebl@debian.org>
 Date: Mon, 21 Dec 2015 16:08:47 +0000
 Subject: Add systemd readiness notification support
 
+Origin: other, https://bugzilla.mindrot.org/show_bug.cgi?id=2641#c13
+Bug: https://bugzilla.mindrot.org/show_bug.cgi?id=2641
 Bug-Debian: https://bugs.debian.org/778913
-Forwarded: no
-Last-Update: 2017-08-22
+Last-Update: 2024-03-31
 
 Patch-Name: systemd-readiness.patch
 ---
- configure.ac | 24 ++++++++++++++++++++++++
- sshd.c       |  9 +++++++++
- 2 files changed, 33 insertions(+)
+ configure.ac                | 10 +++++
+ openbsd-compat/port-linux.c | 76 ++++++++++++++++++++++++++++++++++++-
+ openbsd-compat/port-linux.h |  5 +++
+ platform.c                  |  6 +++
+ 4 files changed, 95 insertions(+), 2 deletions(-)
 
 diff --git a/configure.ac b/configure.ac
-index 2b2c4f086..81f75eb85 100644
+index 2b2c4f086..0bfd72fea 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -4950,6 +4950,29 @@ AC_SUBST([GSSLIBS])
- AC_SUBST([K5LIBS])
- AC_SUBST([CHANNELLIBS])
+@@ -5374,6 +5374,16 @@ AC_ARG_WITH([bsd-auth],
+ 	]
+ )
  
-+# Check whether user wants systemd support
-+SYSTEMD_MSG="no"
-+AC_ARG_WITH(systemd,
-+	[  --with-systemd          Enable systemd support],
-+	[ if test "x$withval" != "xno" ; then
-+		AC_PATH_TOOL([PKGCONFIG], [pkg-config], [no])
-+		if test "$PKGCONFIG" != "no"; then
-+			AC_MSG_CHECKING([for libsystemd])
-+			if $PKGCONFIG --exists libsystemd; then
-+				SYSTEMD_CFLAGS=`$PKGCONFIG --cflags libsystemd`
-+				SYSTEMD_LIBS=`$PKGCONFIG --libs libsystemd`
-+				CPPFLAGS="$CPPFLAGS $SYSTEMD_CFLAGS"
-+				SSHDLIBS="$SSHDLIBS $SYSTEMD_LIBS"
-+				AC_MSG_RESULT([yes])
-+				AC_DEFINE(HAVE_SYSTEMD, 1, [Define if you want systemd support.])
-+				SYSTEMD_MSG="yes"
-+			else
-+				AC_MSG_RESULT([no])
-+			fi
++AC_ARG_WITH([systemd-notify],
++	[  --with-systemd-notify=name Have sshd notify systemd on start/reload ],
++	[
++		if test "x$withval" = "xyes"; then
++			AC_DEFINE_UNQUOTED([WITH_SYSTEMD_NOTIFY], [1],
++				[Define to have sshd notify systemd on start/reload])
 +		fi
-+	fi ]
++	]
 +)
 +
- # Looking for programs, paths and files
+ # Where to place sshd.pid
+ piddir=/var/run
+ # make sure the directory exists
+diff --git a/openbsd-compat/port-linux.c b/openbsd-compat/port-linux.c
+index 0394f4808..cdac54dc8 100644
+--- a/openbsd-compat/port-linux.c
++++ b/openbsd-compat/port-linux.c
+@@ -21,7 +21,11 @@
  
- PRIVSEP_PATH=/var/empty
-@@ -5769,6 +5792,7 @@ echo "                   libldns support: $LDNS_MSG"
- echo "  Solaris process contract support: $SPC_MSG"
- echo "           Solaris project support: $SP_MSG"
- echo "         Solaris privilege support: $SPP_MSG"
-+echo "                   systemd support: $SYSTEMD_MSG"
- echo "       IP address in \$DISPLAY hack: $DISPLAY_HACK_MSG"
- echo "           Translate v4 in v6 hack: $IPV4_IN6_HACK_MSG"
- echo "                  BSD Auth support: $BSD_AUTH_MSG"
-diff --git a/sshd.c b/sshd.c
-index 8fab51ebb..b981e7758 100644
---- a/sshd.c
-+++ b/sshd.c
-@@ -88,6 +88,10 @@
- #include <prot.h>
+ #include "includes.h"
+ 
+-#if defined(WITH_SELINUX) || defined(LINUX_OOM_ADJUST)
++#if defined(WITH_SELINUX) || defined(LINUX_OOM_ADJUST) || \
++    defined(WITH_SYSTEMD_NOTIFY)
++#include <sys/socket.h>
++#include <sys/un.h>
++
+ #include <errno.h>
+ #include <stdarg.h>
+ #include <string.h>
+@@ -317,4 +321,72 @@ oom_adjust_restore(void)
+ 	return;
+ }
+ #endif /* LINUX_OOM_ADJUST */
+-#endif /* WITH_SELINUX || LINUX_OOM_ADJUST */
++
++#ifdef WITH_SYSTEMD_NOTIFY
++static void
++ssh_systemd_notify(const char *s, int nolog)
++{
++	const char *path;
++	struct stat sb;
++	struct sockaddr_un addr;
++	int fd;
++
++	if ((path = getenv("NOTIFY_SOCKET")) == NULL)
++		return;
++	if (stat(path, &sb) != 0) {
++		if (!nolog) {
++			error_f("socket \"%s\" stat: %s",
++			    path, strerror(errno));
++		}
++		return;
++	}
++
++	memset(&addr, 0, sizeof(addr));
++	addr.sun_family = AF_UNIX;
++	if (strlcpy(addr.sun_path, path,
++	    sizeof(addr.sun_path)) >= sizeof(addr.sun_path)) {
++		if (!nolog)
++			error_f("socket path \"%s\" too long", path);
++		return;
++	}
++	if ((fd = socket(PF_UNIX, SOCK_DGRAM, 0)) == -1) {
++		if (!nolog)
++			error_f("socket \"%s\": %s", path, strerror(errno));
++		return;
++	}
++	if (connect(fd, &addr, sizeof(addr)) != 0) {
++		if (!nolog) {
++			error_f("socket \"%s\" connect: %s",
++			    path, strerror(errno));
++		}
++		close(fd);
++		return;
++	}
++	if (write(fd, s, strlen(s)) != (ssize_t)strlen(s)) {
++		if (!nolog) {
++			error_f("socket \"%s\" write: %s",
++			    path, strerror(errno));
++		}
++		close(fd);
++		return;
++	}
++	close(fd);
++	if (!nolog) {
++		debug_f("socket \"%s\" notified %s", path, s);
++	}
++}
++
++void
++ssh_systemd_notify_ready(void)
++{
++	ssh_systemd_notify("READY=1", 0);
++}
++
++void ssh_systemd_notify_reload(void)
++{
++	/* Called in signal handler context, so disable logging */
++	ssh_systemd_notify("RELOADING=1", 1);
++}
++#endif /* WITH_SYSTEMD_NOTIFY */
++
++#endif /* WITH_SELINUX || LINUX_OOM_ADJUST || WITH_SYSTEMD_NOTIFY */
+diff --git a/openbsd-compat/port-linux.h b/openbsd-compat/port-linux.h
+index c88129428..8e141db2c 100644
+--- a/openbsd-compat/port-linux.h
++++ b/openbsd-compat/port-linux.h
+@@ -30,4 +30,9 @@ void oom_adjust_restore(void);
+ void oom_adjust_setup(void);
  #endif
  
-+#ifdef HAVE_SYSTEMD
-+#include <systemd/sd-daemon.h>
++#ifdef WITH_SYSTEMD_NOTIFY
++void ssh_systemd_notify_ready(void);
++void ssh_systemd_notify_reload(void);
 +#endif
 +
- #include "xmalloc.h"
- #include "ssh.h"
- #include "ssh2.h"
-@@ -2101,6 +2105,11 @@ main(int ac, char **av)
- 			}
- 		}
+ #endif /* ! _PORT_LINUX_H */
+diff --git a/platform.c b/platform.c
+index 70c3a9b58..9d31790fd 100644
+--- a/platform.c
++++ b/platform.c
+@@ -42,6 +42,9 @@ platform_pre_listen(void)
+ 	/* Adjust out-of-memory killer so listening process is not killed */
+ 	oom_adjust_setup();
+ #endif
++#ifdef WITH_SYSTEMD_NOTIFY
++	ssh_systemd_notify_ready();
++#endif
+ }
  
-+#ifdef HAVE_SYSTEMD
-+		/* Signal systemd that we are ready to accept connections */
-+		sd_notify(0, "READY=1");
+ void
+@@ -55,6 +58,9 @@ platform_pre_fork(void)
+ void
+ platform_pre_restart(void)
+ {
++#ifdef WITH_SYSTEMD_NOTIFY
++	ssh_systemd_notify_reload();
 +#endif
-+
- 		/* Accept a connection and return in a forked child */
- 		server_accept_loop(&sock_in, &sock_out,
- 		    &newsock, config_s);
+ #ifdef LINUX_OOM_ADJUST
+ 	oom_adjust_restore();
+ #endif
