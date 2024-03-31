@@ -5384,6 +5384,16 @@ AC_ARG_WITH([systemd-notify],
 	]
 )
 
+AC_ARG_WITH([systemd-socket-activation],
+	[  --with-systemd-socket-activation Allow use via systemd.socket(5)],
+	[
+		if test "x$withval" = "xyes"; then
+			AC_DEFINE_UNQUOTED([WITH_SYSTEMD_SOCKET_ACTIVATION], [1],
+				[Define to have sshd accept systemd socket activation])
+		fi
+	]
+)
+
 # Where to place sshd.pid
 piddir=/var/run
 # make sure the directory exists
