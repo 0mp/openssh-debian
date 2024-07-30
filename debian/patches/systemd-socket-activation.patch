@@ -1,4 +1,4 @@
-From fa0df757092fdea63050bfb8cd026be7e306fb6b Mon Sep 17 00:00:00 2001
+From 4d9aed410ad7302e91c99dc9d6fc46b474429624 Mon Sep 17 00:00:00 2001
 From: Steve Langasek <steve.langasek@ubuntu.com>
 Date: Thu, 1 Sep 2022 16:03:37 +0100
 Subject: Support systemd socket activation
@@ -9,8 +9,11 @@ the child process handle the accept().  This lets us do delayed start
 of the sshd daemon without becoming incompatible with config options
 like ClientAliveCountMax.
 
+Author: Steve Langasek <steve.langasek@ubuntu.com>
+Author: Nick Rosbrook <enr0n@ubuntu.com>
 Author: Colin Watson <cjwatson@debian.org>
-Last-Update: 2024-04-03
+Author: Marco Trevisan <marco@ubuntu.com>
+Last-Update: 2024-07-30
 
 Patch-Name: systemd-socket-activation.patch
 ---

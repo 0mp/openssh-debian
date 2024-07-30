@@ -1,4 +1,4 @@
-From 970418438361c9b07dd68c4855c5f8d099046ac4 Mon Sep 17 00:00:00 2001
+From c2caebd0ed908b015d379e396e0bf14b10c275be Mon Sep 17 00:00:00 2001
 From: Salvatore Bonaccorso <carnil@debian.org>
 Date: Tue, 25 Jun 2024 12:24:29 +0100
 Subject: Disable async-signal-unsafe code from the sshsigdie() function

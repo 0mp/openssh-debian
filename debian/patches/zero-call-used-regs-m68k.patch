@@ -1,4 +1,4 @@
-From 42fbbd66551503c395e4b4f9405afa7d0f0aeba0 Mon Sep 17 00:00:00 2001
+From 2154423a6c6f6e695b2bbb25316e8446e6c2bff7 Mon Sep 17 00:00:00 2001
 From: Colin Watson <cjwatson@debian.org>
 Date: Thu, 21 Mar 2024 10:20:21 +0000
 Subject: Extend -fzero-call-used-regs check to catch m68k gcc bug
