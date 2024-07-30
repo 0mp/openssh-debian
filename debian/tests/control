@@ -15,3 +15,15 @@ Restrictions: needs-root allow-stderr isolation-container
 Depends: openssh-server,
          krb5-kdc,
          krb5-admin-server
+
+Tests: systemd-socket-activation
+Restrictions: needs-root allow-stderr
+Depends: openssh-client,
+         openssh-server,
+         systemd,
+
+Tests: sshd-socket-generator
+Restrictions: needs-root allow-stderr
+Depends: openssh-client,
+         openssh-server,
+         systemd,

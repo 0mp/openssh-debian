@@ -135,19 +135,18 @@ int allow_severity;
 int deny_severity;
 #endif /* LIBWRAP */
 
-/* Re-exec fds */
+/* This will only get set if we build with systemd. */
+static int systemd_num_listen_fds;
+
 #ifdef SYSTEMD_SOCKET_ACTIVATION
-static int get_systemd_listen_fds(void);
-#define SYSTEMD_OFFSET get_systemd_listen_fds()
 #define SYSTEMD_LISTEN_FDS_START 3
-#else
-#define SYSTEMD_OFFSET 0
 #endif
 
-#define REEXEC_DEVCRYPTO_RESERVED_FD	(STDERR_FILENO + 1 + SYSTEMD_OFFSET)
-#define REEXEC_STARTUP_PIPE_FD		(STDERR_FILENO + 2 + SYSTEMD_OFFSET)
-#define REEXEC_CONFIG_PASS_FD		(STDERR_FILENO + 3 + SYSTEMD_OFFSET)
-#define REEXEC_MIN_FREE_FD		(STDERR_FILENO + 4 + SYSTEMD_OFFSET)
+/* Re-exec fds */
+#define REEXEC_DEVCRYPTO_RESERVED_FD	(STDERR_FILENO + 1 + systemd_num_listen_fds)
+#define REEXEC_STARTUP_PIPE_FD		(STDERR_FILENO + 2 + systemd_num_listen_fds)
+#define REEXEC_CONFIG_PASS_FD		(STDERR_FILENO + 3 + systemd_num_listen_fds)
+#define REEXEC_MIN_FREE_FD		(STDERR_FILENO + 4 + systemd_num_listen_fds)
 
 extern char *__progname;
 
@@ -198,6 +197,7 @@ static char **rexec_argv;
  */
 #define	MAX_LISTEN_SOCKS	16
 static int listen_socks[MAX_LISTEN_SOCKS];
+static int listen_socks_no_close[MAX_LISTEN_SOCKS];
 static int num_listen_socks = 0;
 
 /* Daemon's agent connection */
@@ -283,12 +283,16 @@ static char *listener_proctitle;
  * Close all listening sockets
  */
 static void
-close_listen_socks(void)
+close_listen_socks(int force)
 {
 	int i;
 
-	for (i = 0; i < num_listen_socks; i++)
+	for (i = 0; i < num_listen_socks; i++) {
+		if (listen_socks_no_close[i] > 0 && force <= 0)
+			continue;
+
 		close(listen_socks[i]);
+        }
 	num_listen_socks = 0;
 }
 
@@ -326,7 +330,7 @@ sighup_restart(void)
 	if (options.pid_file != NULL)
 		unlink(options.pid_file);
 	platform_pre_restart();
-	close_listen_socks();
+	close_listen_socks(/* force = */ 0);
 	close_startup_pipes();
 	ssh_signal(SIGHUP, SIG_IGN); /* will be restored after exec */
 	execv(saved_argv[0], saved_argv);
@@ -1027,10 +1031,8 @@ server_accept_inetd(int *sock_in, int *sock_out)
 #ifdef SYSTEMD_SOCKET_ACTIVATION
 /*
  * Get file descriptors passed by systemd; this implements the protocol
- * described in the NOTES section of sd_listen_fds(3).
- *
- * We deliberately return 0 on error, so that the return value can safely be
- * added as part of the REEXEC_*_FD macros without extra checks.
+ * described in the NOTES section of sd_listen_fds(3), with a few exceptions
+ * to handle our needs in sshd.
  */
 static int
 get_systemd_listen_fds(void)
@@ -1041,12 +1043,18 @@ get_systemd_listen_fds(void)
 	const char *errstr = NULL;
 	int fd;
 
-	listen_pid_str = getenv("LISTEN_PID");
-	if (listen_pid_str == NULL)
-		return 0;
-	listen_pid = (pid_t)strtonum(listen_pid_str, 2, INT_MAX, &errstr);
-	if (errstr != NULL || getpid() != listen_pid)
-		return 0;
+	/* When we have been re-executed, do not check $LISTEN_PID because it will
+	 * not match, but we still need to check $LISTEN_FDS. */
+	if (!rexeced_flag) {
+	        listen_pid_str = getenv("LISTEN_PID");
+	        if (listen_pid_str == NULL)
+	                return 0;
+	        listen_pid = (pid_t)strtonum(listen_pid_str, 2, INT_MAX, &errstr);
+	        if (errstr != NULL)
+	                return -errno;
+	        if (getpid() != listen_pid)
+	                return 0;
+	}
 
 	listen_fds_str = getenv("LISTEN_FDS");
 	if (listen_fds_str == NULL)
@@ -1054,13 +1062,7 @@ get_systemd_listen_fds(void)
 	listen_fds = (int)strtonum(listen_fds_str, 1,
 	    INT_MAX - SYSTEMD_LISTEN_FDS_START, &errstr);
 	if (errstr != NULL)
-		return 0;
-
-	for (fd = SYSTEMD_LISTEN_FDS_START;
-	    fd < SYSTEMD_LISTEN_FDS_START + listen_fds; fd++) {
-		if (fcntl(fd, F_SETFD, FD_CLOEXEC) == -1)
-			return 0;
-	}
+		return -errno;
 
 	return listen_fds;
 }
@@ -1071,7 +1073,7 @@ get_systemd_listen_fds(void)
 static void
 setup_systemd_socket(int listen_sock)
 {
-	int ret;
+	int flags, ret;
 	struct sockaddr_storage addr;
 	socklen_t len = sizeof(addr);
 	char ntop[NI_MAXHOST], strport[NI_MAXSERV];
@@ -1096,10 +1098,27 @@ setup_systemd_socket(int listen_sock)
 		close(listen_sock);
 		return;
 	}
+
 	/* Socket options */
 	set_reuseaddr(listen_sock);
 
+	/* systemd sets FD_CLOEXEC on the fds it passes to us, but we need this
+	 * to stay open across re-exec. */
+	flags = fcntl(listen_sock, F_GETFD);
+	if (flags < 0) {
+	        error("Failed to get fd flags: %s", strerror(errno));
+	        close(listen_sock);
+	        return;
+	}
+
+	if (fcntl(listen_sock, F_SETFD, flags & ~FD_CLOEXEC) < 0) {
+	        error("Failed to clear FD_CLOEXEC flag: %s", strerror(errno));
+	        close(listen_sock);
+	        return;
+	}
+
 	listen_socks[num_listen_socks] = listen_sock;
+	listen_socks_no_close[num_listen_socks] = 1;
 	num_listen_socks++;
 
 	logit("Server listening on %s port %s.", ntop, strport);
@@ -1185,20 +1204,16 @@ static void
 server_listen(void)
 {
 	u_int i;
-#ifdef SYSTEMD_SOCKET_ACTIVATION
-	int systemd_socket_count;
-#endif
 
 	/* Initialise per-source limit tracking. */
 	srclimit_init(options.max_startups, options.per_source_max_startups,
 	    options.per_source_masklen_ipv4, options.per_source_masklen_ipv6);
 
 #ifdef SYSTEMD_SOCKET_ACTIVATION
-	systemd_socket_count = get_systemd_listen_fds();
-	if (systemd_socket_count > 0)
+	if (systemd_num_listen_fds > 0)
 	{
 		int i;
-		for (i = 0; i < systemd_socket_count; i++)
+		for (i = 0; i < systemd_num_listen_fds; i++)
 			setup_systemd_socket(SYSTEMD_LISTEN_FDS_START + i);
 	} else
 #endif
@@ -1268,7 +1283,7 @@ server_accept_loop(int *sock_in, int *sock_out, int *newsock, int *config_s)
 		if (received_sigterm) {
 			logit("Received signal %d; terminating.",
 			    (int) received_sigterm);
-			close_listen_socks();
+			close_listen_socks(/* force = */ 1);
 			if (options.pid_file != NULL)
 				unlink(options.pid_file);
 			exit(received_sigterm == SIGTERM ? 0 : 255);
@@ -1282,7 +1297,7 @@ server_accept_loop(int *sock_in, int *sock_out, int *newsock, int *config_s)
 		if (received_sighup) {
 			if (!lameduck) {
 				debug("Received SIGHUP; waiting for children");
-				close_listen_socks();
+				close_listen_socks(/* force = */ 0);
 				lameduck = 1;
 			}
 			if (listening <= 0) {
@@ -1409,7 +1424,7 @@ server_accept_loop(int *sock_in, int *sock_out, int *newsock, int *config_s)
 				 * connection without forking.
 				 */
 				debug("Server will not fork when running in debugging mode.");
-				close_listen_socks();
+				close_listen_socks(/* force = */ 0);
 				*sock_in = *newsock;
 				*sock_out = *newsock;
 				close(startup_p[0]);
@@ -1443,7 +1458,7 @@ server_accept_loop(int *sock_in, int *sock_out, int *newsock, int *config_s)
 				platform_post_fork_child();
 				startup_pipe = startup_p[1];
 				close_startup_pipes();
-				close_listen_socks();
+				close_listen_socks(/* force = */ 1);
 				*sock_in = *newsock;
 				*sock_out = *newsock;
 				log_init(__progname,
@@ -1814,6 +1829,15 @@ main(int ac, char **av)
 			break;
 		}
 	}
+
+#ifdef SYSTEMD_SOCKET_ACTIVATION
+	r = get_systemd_listen_fds();
+	if (r < 0)
+	        fatal("Failed to get systemd socket fds: %s", strerror(-r));
+
+	systemd_num_listen_fds = r;
+#endif
+
 	if (rexeced_flag || inetd_flag)
 		rexec_flag = 0;
 	if (!test_flag && !do_dump_cfg && rexec_flag && !path_absolute(av[0]))

@@ -110,17 +110,40 @@ if [ "$action" = configure ]; then
 	    # which we now move back into place.
 	    mv /etc/ssh/moduli.dpkg-bak /etc/ssh/moduli
 	fi
-	if dpkg --compare-versions "$2" lt-nl 1:9.1p1-1~ && \
-	   deb-systemd-helper --quiet was-enabled ssh.socket && \
-	   [ -d /run/systemd/system ]
-	then
-		# migrate to systemd socket activation.
-		systemctl unmask ssh.service
-		systemctl disable ssh.service
-	fi
+        if dpkg --compare-versions "$2" lt-nl 1:9.6p1-6~; then
+                # Remove old socket activation drop-in configurations, if they exist.
+                if [ -d /etc/systemd/system/ssh.socket.d ]; then
+                        rm -f /etc/systemd/system/ssh.socket.d/addresses.conf
+                        rmdir --ignore-fail-on-non-empty /etc/systemd/system/ssh.socket.d
+                fi
+                if [ -d /etc/systemd/system/ssh.service.d ]; then
+                        rm -f /etc/systemd/system/ssh.service.d/00-socket.conf
+                        rmdir --ignore-fail-on-non-empty /etc/systemd/system/ssh.service.d
+                fi
+                if [ -d /run/systemd/system ]; then
+                        # Make sure ssh.service is disabled.
+                        systemctl unmask ssh.service
+                        systemctl disable --now ssh.service > /dev/null 2>&1
+
+                        # sshd-socket-generator is invoked on daemon-reload.
+                        systemctl daemon-reload
+                        systemctl enable ssh.socket
+                fi
+        fi
 fi
 
 #DEBHELPER#
+
+if [ -d /run/systemd/system ]; then
+        # sshd-socket-generator is invoked on daemon-reload.
+        systemctl daemon-reload
+
+        if deb-systemd-helper --quiet was-enabled ssh.socket; then
+                deb-systemd-invoke restart ssh.socket
+        elif deb-systemd-helper --quiet was-enabled ssh.service; then
+                deb-systemd-invoke restart ssh.service
+        fi
+fi
 
 db_stop
 
