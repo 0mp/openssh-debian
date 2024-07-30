@@ -17,6 +17,7 @@ srcdir=@srcdir@
 top_srcdir=@top_srcdir@
 abs_top_srcdir=@abs_top_srcdir@
 abs_top_builddir=@abs_top_builddir@
+systemd_system_generator_dir=$(shell pkg-config --variable=systemd_system_generator_dir systemd)
 
 DESTDIR=
 VPATH=@srcdir@
@@ -69,7 +70,7 @@ MKDIR_P=@MKDIR_P@
 
 .SUFFIXES: .lo
 
-TARGETS=ssh$(EXEEXT) sshd$(EXEEXT) ssh-add$(EXEEXT) ssh-keygen$(EXEEXT) ssh-keyscan${EXEEXT} ssh-keysign${EXEEXT} ssh-pkcs11-helper$(EXEEXT) ssh-agent$(EXEEXT) scp$(EXEEXT) sftp-server$(EXEEXT) sftp$(EXEEXT) ssh-sk-helper$(EXEEXT)
+TARGETS=ssh$(EXEEXT) sshd$(EXEEXT) ssh-add$(EXEEXT) ssh-keygen$(EXEEXT) ssh-keyscan${EXEEXT} ssh-keysign${EXEEXT} ssh-pkcs11-helper$(EXEEXT) ssh-agent$(EXEEXT) scp$(EXEEXT) sftp-server$(EXEEXT) sftp$(EXEEXT) ssh-sk-helper$(EXEEXT) sshd-socket-generator$(EXEEXT)
 
 XMSS_OBJS=\
 	ssh-xmss.o \
@@ -133,6 +134,16 @@ SSHDOBJS=sshd.o auth-rhosts.o auth-passwd.o \
 	sandbox-null.o sandbox-rlimit.o sandbox-systrace.o sandbox-darwin.o \
 	sandbox-seccomp-filter.o sandbox-capsicum.o sandbox-pledge.o \
 	sandbox-solaris.o uidswap.o $(SKOBJS)
+
+SSHD_SOCKET_GEN_OBJS=sshd-socket-generator.o \
+	platform.o servconf.o groupaccess.o audit.o audit-linux.o \
+	auth2.o auth2-none.o auth2-gss.o \
+	auth2-passwd.o auth2-kbdint.o auth2-hostbased.o \
+	auth-options.o uidswap.o auth2-pubkey.o auth.o \
+	auth2-pubkeyfile.o auth-rhosts.o auth-passwd.o \
+	gss-serv.o auth2-chall.o auth-pam.o gss-serv-krb5.o \
+	loginrec.o auth-krb5.o auth-shadow.o \
+	monitor.o monitor_wrap.o
 
 SFTP_CLIENT_OBJS=sftp-common.o sftp-client.o sftp-glob.o
 
@@ -209,6 +220,9 @@ ssh$(EXEEXT): $(LIBCOMPAT) libssh.a $(SSHOBJS)
 
 sshd$(EXEEXT): libssh.a	$(LIBCOMPAT) $(SSHDOBJS)
 	$(LD) -o $@ $(SSHDOBJS) $(LDFLAGS) -lssh -lopenbsd-compat $(SSHDLIBS) $(LIBS) $(GSSLIBS) $(K5LIBS) $(CHANNELLIBS)
+
+sshd-socket-generator$(EXEEXT): libssh.a $(LIBCOMPAT) $(SSHD_SOCKET_GEN_OBJS)
+	$(LD) -o $@ $(SSHD_SOCKET_GEN_OBJS) $(LDFLAGS) -lssh -lopenbsd-compat $(SSHDLIBS) $(LIBS) $(GSSLIBS) $(K5LIBS) $(CHANNELLIBS)
 
 scp$(EXEEXT): $(LIBCOMPAT) libssh.a $(SCP_OBJS)
 	$(LD) -o $@ $(SCP_OBJS) $(LDFLAGS) -lssh -lopenbsd-compat $(LIBS)
@@ -392,6 +406,7 @@ install-files:
 	$(MKDIR_P) $(DESTDIR)$(mandir)/$(mansubdir)5
 	$(MKDIR_P) $(DESTDIR)$(mandir)/$(mansubdir)8
 	$(MKDIR_P) $(DESTDIR)$(libexecdir)
+	$(MKDIR_P) $(DESTDIR)$(systemd_system_generator_dir)
 	$(MKDIR_P) -m 0755 $(DESTDIR)$(PRIVSEP_PATH)
 	$(INSTALL) -m 0755 $(STRIP_OPT) ssh$(EXEEXT) $(DESTDIR)$(bindir)/ssh$(EXEEXT)
 	$(INSTALL) -m 0755 $(STRIP_OPT) scp$(EXEEXT) $(DESTDIR)$(bindir)/scp$(EXEEXT)
@@ -421,6 +436,7 @@ install-files:
 	$(INSTALL) -m 644 ssh-keysign.8.out $(DESTDIR)$(mandir)/$(mansubdir)8/ssh-keysign.8
 	$(INSTALL) -m 644 ssh-pkcs11-helper.8.out $(DESTDIR)$(mandir)/$(mansubdir)8/ssh-pkcs11-helper.8
 	$(INSTALL) -m 644 ssh-sk-helper.8.out $(DESTDIR)$(mandir)/$(mansubdir)8/ssh-sk-helper.8
+	$(INSTALL) -m 0755 $(STRIP_OPT) sshd-socket-generator$(EXEEXT) $(DESTDIR)$(systemd_system_generator_dir)/sshd-socket-generator$(EXEEXT)
 
 install-sysconf:
 	$(MKDIR_P) $(DESTDIR)$(sysconfdir)
@@ -478,6 +494,7 @@ uninstall:
 	-rm -f $(DESTDIR)$(bindir)/ssh-keyscan$(EXEEXT)
 	-rm -f $(DESTDIR)$(bindir)/sftp$(EXEEXT)
 	-rm -f $(DESTDIR)$(sbindir)/sshd$(EXEEXT)
+	-rm -f $(DESTDIR)$(systemd_system_generator_dir)/sshd-socket-generator$(EXEEXT)
 	-rm -r $(DESTDIR)$(SFTP_SERVER)$(EXEEXT)
 	-rm -f $(DESTDIR)$(SSH_KEYSIGN)$(EXEEXT)
 	-rm -f $(DESTDIR)$(SSH_PKCS11_HELPER)$(EXEEXT)
