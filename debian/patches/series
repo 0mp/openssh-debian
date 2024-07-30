@@ -30,3 +30,4 @@ regress-conch-dev-zero.patch
 configure-cache-vars.patch
 pam-avoid-unknown-host.patch
 sshsigdie-async-signal-unsafe.patch
+sshd-socket-generator.patch
